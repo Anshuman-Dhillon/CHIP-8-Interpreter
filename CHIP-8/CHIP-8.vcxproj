@@ -120,6 +120,7 @@
       <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <AdditionalIncludeDirectories>C:\Users\Anshuman Dhillon\Desktop\Projects\CHIP-8\CHIP-8\imgui;C:\Users\Anshuman Dhillon\Desktop\Projects\CHIP-8\CHIP-8\CHIP-8\Dependencies\lib\x64;C:\Users\Anshuman Dhillon\Desktop\Projects\CHIP-8\CHIP-8\CHIP-8\Dependencies\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <LanguageStandard>stdcpp20</LanguageStandard>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>

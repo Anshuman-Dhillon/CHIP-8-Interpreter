@@ -22,16 +22,20 @@ const uint32_t entry_point = 0x200; // CHIP-8 ROMs start at 0x200
 struct Sdl {
     SDL_Window* window{};
     SDL_Renderer* renderer{};
+	SDL_AudioStream* audio_stream{};
 };
 
 // Emulator configuration structure
 struct Config {
-    uint32_t window_width;  // SDL window width
-    uint32_t window_height; // SDL window height
-    uint32_t fg_color;      // Foreground color RGBA8888
-    uint32_t bg_color;      // Background color RGBA8888
-    uint32_t scale_factor;  // Scale factor for the window
-	uint32_t clock_rate;    // CHIP8 CPU "clock rate" or Hz
+    uint32_t window_width;          // SDL window width
+    uint32_t window_height;         // SDL window height
+    uint32_t fg_color;              // Foreground color RGBA8888
+    uint32_t bg_color;              // Background color RGBA8888
+    uint32_t scale_factor;          // Scale factor for the window
+	uint32_t clock_rate;            // CHIP8 CPU "clock rate" or Hz
+    uint32_t square_wave_freq;      // Frequency of the square wave beep sound
+	uint32_t audio_sample_rate;     // Audio sample rate (CD quality, 44100 Hz)
+	uint16_t volume;				// How loud the sound is
 };
 
 // Emulator state
@@ -87,7 +91,24 @@ struct Chip8 {
     bool collision_detected = false;
 };
 
-bool init_sdl(Sdl& sdl, const Config& config) {
+// Audio generation function for square wave
+void generate_square_wave(float* buffer, int sample_count, uint32_t sample_rate, uint32_t frequency, uint16_t volume, uint32_t* phase) {
+    const float amplitude = volume / 32767.0f; // Normalize volume
+    const float samples_per_cycle = (float)sample_rate / frequency;
+
+    for (int i = 0; i < sample_count; i++) {
+        float sample = ((*phase / (uint32_t)(samples_per_cycle / 2)) % 2) ? amplitude : -amplitude;
+        buffer[i] = sample;
+
+        (*phase)++;
+
+        if (*phase >= (uint32_t)samples_per_cycle) {
+            *phase = 0;
+        }
+    }
+}
+
+bool init_sdl(Sdl& sdl, Config* config) {
     if (!SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO)) {
         SDL_Log("Unable to initialize SDL: %s\n", SDL_GetError());
         return false;
@@ -96,8 +117,8 @@ bool init_sdl(Sdl& sdl, const Config& config) {
     float main_scale = SDL_GetDisplayContentScale(SDL_GetPrimaryDisplay());
 
     sdl.window = SDL_CreateWindow("CHIP-8 Emulator",
-        config.window_width * config.scale_factor,
-        config.window_height * config.scale_factor,
+        config->window_width * config->scale_factor,
+        config->window_height * config->scale_factor,
         SDL_WINDOW_RESIZABLE);
 
     if (!sdl.window) {
@@ -110,6 +131,19 @@ bool init_sdl(Sdl& sdl, const Config& config) {
 
     if (!sdl.renderer) {
         SDL_Log("Could not create renderer: %s\n", SDL_GetError());
+        return false;
+    }
+    
+    SDL_AudioSpec spec;
+    spec.freq = config->audio_sample_rate;  // 44100Hz
+    spec.format = SDL_AUDIO_F32;            // Use float format for easier processing
+    spec.channels = 1;                      // Mono
+
+    // Create audio stream bound to default playback device
+    sdl.audio_stream = SDL_OpenAudioDeviceStream(SDL_AUDIO_DEVICE_DEFAULT_PLAYBACK, &spec, nullptr, nullptr);
+
+    if (!sdl.audio_stream) {
+        SDL_Log("Failed to create audio stream: %s", SDL_GetError());
         return false;
     }
 
@@ -143,12 +177,15 @@ bool init_sdl(Sdl& sdl, const Config& config) {
 
 bool set_config_from_args(Config& config) {
     config = {
-        64,             // CHIP8 original X resolution
-        32,             // CHIP8 original Y resolution
-        0xFFFFFFFF,     // WHITE (foreground)
-        0x000000FF,     // BLACK (background)
-        35,             // Scale
-		700             // Number of instructions to emulate per second
+        64,                 // CHIP8 original X resolution
+        32,                 // CHIP8 original Y resolution
+        0xFFFFFFFF,         // WHITE (foreground)
+        0x000000FF,         // BLACK (background)
+        35,                 // Scale
+		700,                // Number of instructions to emulate per second
+		440,			    // Frequency of the square wave beep sound
+		44100,              // Audio sample rate (CD quality, 44100 Hz)
+		2000, 	            // Volume of the beep sound
     };
     return true;
 }
@@ -182,6 +219,34 @@ bool loadROM(Chip8& chip8, const string& rom) {
     chip8.state = EmulatorState::RUNNING;
 
     return true;
+}
+
+// Audio control functions
+void start_sound(const Sdl& sdl, const Config& config) {
+    if (!sdl.audio_stream) return;
+
+    // Generate a small buffer of square wave audio
+    const int buffer_size = 1024; // Small buffer for immediate response
+    float audio_buffer[buffer_size];
+    static uint32_t audio_phase = 0;
+
+    generate_square_wave(audio_buffer, buffer_size, config.audio_sample_rate, config.square_wave_freq, config.volume, &audio_phase);
+
+    // Put the audio data into the stream
+    SDL_PutAudioStreamData(sdl.audio_stream, audio_buffer, buffer_size * sizeof(float));
+
+    // Resume the audio stream
+    SDL_ResumeAudioDevice(SDL_GetAudioStreamDevice(sdl.audio_stream));
+}
+
+void stop_sound(const Sdl& sdl) {
+    if (!sdl.audio_stream) return;
+
+    // Pause the audio device
+    SDL_PauseAudioDevice(SDL_GetAudioStreamDevice(sdl.audio_stream));
+
+    // Clear any remaining audio data
+    SDL_ClearAudioStream(sdl.audio_stream);
 }
 
 bool init_chip8(Chip8& chip8) {
@@ -253,6 +318,11 @@ void final_cleanup(const Sdl& sdl) {
 
     SDL_DestroyRenderer(sdl.renderer);
     SDL_DestroyWindow(sdl.window);
+
+    if (sdl.audio_stream) {
+        SDL_DestroyAudioStream(sdl.audio_stream);
+    }
+
     SDL_Quit();
 }
 
@@ -1113,7 +1183,7 @@ void emulate_instructions(Chip8 *chip8, Config config) {
     }
 }
 
-void create_control_panel(Chip8& chip8, const Config& config) {
+void create_control_panel(Chip8& chip8, Config* config) {
     //Control Panel with step debugging capabilities
     if (ImGui::Begin("Control Panel")) {
         ImGui::Text("ROM: %s", chip8.rom.empty() ? "No ROM loaded" : chip8.rom.c_str());
@@ -1138,7 +1208,7 @@ void create_control_panel(Chip8& chip8, const Config& config) {
             if (ImGui::Button("Step One Instruction")) {
                 if (!chip8.rom.empty()) {
 					// Execute exactly one instruction while paused and if a ROM is loaded
-                    emulate_instructions(&chip8, config);
+                    emulate_instructions(&chip8, *config);
                 }
             }
             ImGui::SameLine();
@@ -1159,6 +1229,35 @@ void create_control_panel(Chip8& chip8, const Config& config) {
             chip8.state = EmulatorState::QUIT;
         }
 
+        // Audio Controls Section
+        ImGui::Text("Audio Settings:");
+        
+        //percentage-based volume control
+        float volume_percent = (config->volume / 10000.0f) * 100.0f;
+        if (ImGui::SliderFloat("Volume %", &volume_percent, 0.0f, 100.0f, "%.1f%%")) {
+            config->volume = static_cast<uint16_t>((volume_percent / 100.0f) * 10000.0f);
+        }
+
+        //Frequency control for the beep sound
+        int freq_int = static_cast<int>(config->square_wave_freq);
+        if (ImGui::SliderInt("Beep Frequency (Hz)", &freq_int, 100, 2000, "%d Hz")) {
+            config->square_wave_freq = static_cast<uint32_t>(freq_int);
+        }
+
+        //Mute button
+        static bool is_muted = false;
+        static uint16_t saved_volume = config->volume;
+
+        if (ImGui::Checkbox("Mute", &is_muted)) {
+            if (is_muted) {
+                saved_volume = config->volume;
+                config->volume = 0;
+            }
+            else {
+                config->volume = saved_volume;
+            }
+        }
+
         ImGui::Separator();
 
         ImGui::Checkbox("Debug Mode", &chip8.debug_mode);
@@ -1167,7 +1266,7 @@ void create_control_panel(Chip8& chip8, const Config& config) {
             ImGui::SetTooltip("Auto-pause after each instruction for step debugging");
         }
 
-        //helpful statistics for debugging
+        //basic stats (not functional)
         ImGui::Separator();
         ImGui::Text("FPS: %d", 60);
         ImGui::Text("Current memory usage: %d bytes", 4096);
@@ -1193,7 +1292,7 @@ void create_control_panel(Chip8& chip8, const Config& config) {
     ImGui::End();
 }
 
-void create_imgui_interface(Chip8& chip8, Sdl& sdl, const Config& config) {
+void create_imgui_interface(Chip8& chip8, Sdl& sdl, Config& config) {
     ImGui_ImplSDLRenderer3_NewFrame();
     ImGui_ImplSDL3_NewFrame();
     ImGui::NewFrame();
@@ -1205,7 +1304,7 @@ void create_imgui_interface(Chip8& chip8, Sdl& sdl, const Config& config) {
     create_viewport(chip8, config);
 
     //control panel window
-    create_control_panel(chip8, config);
+    create_control_panel(chip8, &config);
 
     //debug windows
     create_debug_windows(chip8);
@@ -1220,7 +1319,7 @@ int main(int argc, char* argv[]) {
         return EXIT_FAILURE;
 
     Sdl sdl{};
-    if (!init_sdl(sdl, config))
+    if (!init_sdl(sdl, &config))
         return EXIT_FAILURE;
 
     Chip8 chip8{};
@@ -1245,7 +1344,9 @@ int main(int argc, char* argv[]) {
             }
             if (chip8.sound_timer > 0) {
                 chip8.sound_timer--;
-                //TODO: sound
+				start_sound(sdl, config); //play sound
+            } else {
+				stop_sound(sdl); //pause sound
             }
 
             if (chip8.debug_mode) {
@@ -1266,7 +1367,7 @@ int main(int argc, char* argv[]) {
         create_imgui_interface(chip8, sdl, config);
 
         //Delay for approximately 60hz/60fps (16.67ms) or actual time elapsed
-		const double time_elapsed = (double)((end_frame_time - start_frame_time) / 1000) / SDL_GetPerformanceFrequency();
+		const double time_elapsed = (double)((end_frame_time - start_frame_time) * 1000) / SDL_GetPerformanceFrequency();
         SDL_Delay(16.67f > time_elapsed ? 16.67f - time_elapsed : 0); // 60fps
 
         //update window with changes
