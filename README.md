@@ -47,20 +47,18 @@ My implementation runs CHIP-8 ROMs accurately at configurable speeds (typically 
 The core of any emulator is instruction processing. CHIP-8 instructions are 16-bit values that encode different operations. My emulator fetches instructions from memory, decodes them into their component parts (opcode, registers, addresses, constants), and executes the corresponding operation.
 
 ```cpp
-// Example from the instruction decoder
-chip8->inst.opcode = (chip8->memory[chip8->pc] << 8) | chip8->memory[chip8->pc + 1];
-chip8->inst.NNN = chip8->inst.opcode & 0x0FFF;  // 12-bit address
-chip8->inst.X = (chip8->inst.opcode >> 8) & 0x0F;  // 4-bit register identifier
+switch ((chip8->inst.opcode >> 12) & 0x0F) {
+        case 0x00:
+        //rest of the opcodes and their implementation...
+}
 ```
 
 The switch-case structure in `emulate_instructions()` handles all 35 CHIP-8 instructions, from simple register operations to complex sprite drawing.
 
 <details>
 <summary><strong>Click to expand for more details about CPU instructions</strong></summary>
-
+<br>
 Like I mentioned before, CHIP-8 instructions are 16-bit values that encode different operations using a carefully designed bit layout. In this section, I'll explain how these bits are extracted and interpreted.
-
-**Instruction Format Breakdown:**
 
 Every CHIP-8 instruction follows this bit pattern:
 ```
@@ -80,27 +78,27 @@ chip8->inst.Y = (chip8->inst.opcode >> 4) & 0x0F;     // 4-bit register ID (bits
 
 The Role of Each Component:
 
--NNN: 12-bit memory address used in jump and call instructions (0x000 to 0xFFF)
--NN: 8-bit immediate value for loading constants into registers (0x00 to 0xFF)
--N: 4-bit value used for sprite height and shift operations (0x0 to 0xF)
--X: Source/destination register identifier (V0 to VF)
--Y: Second register identifier for two-register operations
+- NNN: 12-bit memory address used in jump and call instructions (0x000 to 0xFFF)
+- NN: 8-bit immediate value for loading constants into registers (0x00 to 0xFF)
+- N: 4-bit value used for sprite height and shift operations (0x0 to 0xF)
+- X: Source/destination register identifier (V0 to VF)
+- Y: Second register identifier for two-register operations
 
-Bit Manipulation Explained:
 The bit shifting operations extract specific fields from the 16-bit instruction:
 
--`>> 8` shifts right by 8 bits, moving bits 8-15 to positions 0-7
--`& 0x0F` masks to keep only the lowest 4 bits (binary 1111)
--`& 0x0FFF` masks to keep the lowest 12 bits (binary 111111111111)
+- `>> 8` shifts right by 8 bits, moving bits 8-15 to positions 0-7
+- `& 0x0F` masks to keep only the lowest 4 bits (binary 1111)
+- `& 0x0FFF` masks to keep the lowest 12 bits (binary 111111111111)
 
 Fetch-Decode-Execute Cycle:
 
--Fetch: Read 16-bit instruction from memory at PC address (big-endian format)
--Decode: Extract opcode and operands using bit masks and shifts
--Execute: Use switch-case structure to jump to appropriate instruction handler
--Update: Increment PC and update any affected registers or memory
+- Fetch: Read 16-bit instruction from memory at PC address (big-endian format)
+- Decode: Extract opcode and operands using bit masks and shifts
+- Execute: Use switch-case structure to jump to appropriate instruction handler
+- Update: Increment PC and update any affected registers or memory
 
 The switch-case structure uses the upper 4 bits (opcode) to determine instruction type, with some instructions requiring additional decoding of the lower bits for variants.
+
 </details>
 
 ### Memory Architecture
@@ -122,10 +120,10 @@ My implementation uses SDL3 for the underlying graphics, but I render the CHIP-8
 
 <details>
 <summary><strong>Click to expand for more detail about the graphics/display system</strong></summary>
-  
+
 The CHIP-8 graphics system is simple but elegant. The 64x32 pixel monochrome display uses XOR-based drawing, which creates unique visual effects that many classic games depend on.
 
-XOR Drawing Algorithm:
+###XOR Drawing Algorithm:###
 
 When a sprite is drawn, each pixel is XORed with the corresponding display buffer pixel:
 ```cpp
@@ -143,12 +141,12 @@ Display Pixel | Sprite Pixel | Result | Visual Effect
 
 This creates several important behaviors:
 
-Drawing the same sprite twice in the same location erases it completely
-Overlapping sprites create "holes" where they intersect
-Games can create flashing effects by rapidly redrawing sprites
-Collision detection happens automatically when pixels turn off
+- Drawing the same sprite twice in the same location erases it completely
+- Overlapping sprites create "holes" where they intersect
+- Games can create flashing effects by rapidly redrawing sprites
+- Collision detection happens automatically when pixels turn off
 
-Sprite Drawing Process:
+###Sprite Drawing Process:####
 
 ```cpp
 for (int row = 0; row < chip8->inst.N; row++) {
@@ -165,15 +163,15 @@ for (int row = 0; row < chip8->inst.N; row++) {
 }
 ```
 
-Memory to Display Mapping:
+###Memory to Display Mapping:###
 
-Each sprite row is stored as a single byte in memory
-Bit 7 (leftmost) represents the first pixel
-Bit 0 (rightmost) represents the eighth pixel
-Sprites wrap around screen edges automatically
+- Each sprite row is stored as a single byte in memory
+- Bit 7 (leftmost) represents the first pixel
+- Bit 0 (rightmost) represents the eighth pixel
+- Sprites wrap around screen edges automatically
 
-Collision Detection:
 The VF register is set to 1 when any "on" pixel in the sprite overlaps with an already "on" pixel in the display buffer. This happens before the XOR operation, so games can detect when sprites would collide and react accordingly.
+
 </details>
 
 ### Audio Implementation
