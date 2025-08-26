@@ -62,7 +62,11 @@
 #*.rtf   diff=astextplain
 #*.RTF   diff=astextplain
 
-# Mark only external library directories as vendored
-imgui/* linguist-vendored
-Dependencies/include/* linguist-vendored  
-Dependencies/lib/* linguist-vendored
+# Mark external libraries as vendored
+imgui/ linguist-vendored
+Dependencies/ linguist-vendored
+*.dll linguist-vendored
+*.lib linguist-vendored
+
+# Force main source to be C++
+main.cpp linguist-language=C++
