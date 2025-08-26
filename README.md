@@ -1,6 +1,8 @@
 # CHIP-8 Emulator
 
-A fully functional CHIP-8 interpreter with comprehensive debugging tools, built from scratch in C++ using SDL3 and Dear ImGui.
+A functional CHIP-8 interpreter with comprehensive debugging tools, built from scratch in C++ using SDL3 and Dear ImGui.
+
+![CHIP-8 DEMO](demo/CHIP-8_demo.gif)
 
 ## What is CHIP-8?
 
