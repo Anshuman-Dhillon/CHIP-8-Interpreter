@@ -90,7 +90,7 @@ The switch-case structure in `emulate_instructions()` handles all 35 CHIP-8 inst
 
 <details>
 <summary><strong>Click to expand for more details about CPU instructions</strong></summary>
-
+<br>
 Like I mentioned before, the CHIP-8 instructions are 16-bit values that encode different operations using a carefully designed bit layout.
 
 **Why Separate Into Components?**
@@ -156,7 +156,7 @@ My implementation uses SDL3 for the underlying graphics, but I render the CHIP-8
 
 <details>
 <summary><strong>Click to expand for more details about the graphics/display system</strong></summary>
-
+<br>
 The CHIP-8 graphics system is simple but elegant. The 64x32 pixel monochrome display uses XOR-based drawing, which creates unique visual effects that many classic games depend on.
 
 **Understanding XOR Drawing**
@@ -209,7 +209,7 @@ Users can adjust both the frequency (100-2000 Hz) and volume of the beep sound, 
 
 <details>
 <summary><strong>Click to expand for more details about the sound system</strong></summary>
-
+<br>
 The CHIP-8 audio system generates a simple square wave tone when the sound timer is active. Understanding how this works reveals the fundamentals of digital audio synthesis and why square waves were chosen for early computer systems.
 
 **Square Wave Mathematics**
