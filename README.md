@@ -4,6 +4,35 @@ A functional CHIP-8 interpreter with comprehensive debugging tools, built from s
 
 ![CHIP-8 DEMO](demo/CHIP-8_demo.gif)
 
+
+## Table of Contents
+
+- [What is CHIP-8?](#what-is-chip-8)
+- [Why CHIP-8?](#why-chip-8)
+- [Key Features](#key-features)
+- [How It Works](#how-it-works)
+  - [CPU Instruction Processing](#cpu-instruction-processing)
+  - [Memory Architecture](#memory-architecture)
+  - [Graphics System](#graphics-system)
+  - [Audio Implementation](#audio-implementation)
+  - [Timing and Synchronization](#timing-and-synchronization)
+  - [Debugging Infrastructure](#debugging-infrastructure)
+- [Technical Implementation Details](#technical-implementation-details)
+  - [Architecture Decisions](#architecture-decisions)
+  - [Library Choices](#library-choices)
+  - [Code Organization](#code-organization)
+- [Project Structure](#project-structure)
+- [Building the Project](#building-the-project)
+  - [Prerequisites](#prerequisites)
+  - [Running the Program](#running-the-program)
+- [Usage](#usage)
+- [What I Learned](#what-i-learned)
+- [Known Issues](#known-issues)
+- [Future Improvements](#future-improvements)
+- [References](#references)
+
+---
+
 ## What is CHIP-8?
 
 CHIP-8 is a simple virtual machine and programming language that was originally developed in the 1970s for early personal computers. Unlike modern CPUs, CHIP-8 is an interpreted language. It's not actual hardware, but rather a virtual machine that runs on top of real hardware. This makes it an excellent starting point for learning about emulation and computer architecture.
