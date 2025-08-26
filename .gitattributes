@@ -62,10 +62,7 @@
 #*.rtf   diff=astextplain
 #*.RTF   diff=astextplain
 
-# Mark external dependencies as vendored to exclude from language stats
+# Mark only external library directories as vendored
 imgui/* linguist-vendored
-Dependencies/* linguist-vendored
-tinyfiledialogs/* linguist-vendored
-
-# Explicitly mark main source file as C++
-*.cpp linguist-language=C++
+Dependencies/include/* linguist-vendored  
+Dependencies/lib/* linguist-vendored
