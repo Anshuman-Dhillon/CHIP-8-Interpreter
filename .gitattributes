@@ -61,3 +61,11 @@
 #*.PDF   diff=astextplain
 #*.rtf   diff=astextplain
 #*.RTF   diff=astextplain
+
+# Mark external dependencies as vendored to exclude from language stats
+imgui/* linguist-vendored
+Dependencies/* linguist-vendored
+tinyfiledialogs/* linguist-vendored
+
+# Explicitly mark main source file as C++
+*.cpp linguist-language=C++
