@@ -329,7 +329,7 @@ The entire emulator is implemented in a single `main.cpp` file (approximately 1,
 ### Running the Program
 
 1. Clone the repository or download as a .zip by clicking the green code button
-2. Open file explorer and navigate to x64 -> Release -> Run CHIP-8.exe
+2. Open file explorer, unzip the file, open the unzipped folder, navigate to x64 -> Release -> Run CHIP-8.exe
 
 ## Usage
 
