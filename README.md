@@ -57,6 +57,8 @@ switch ((chip8->inst.opcode >> 12) & 0x0F) {
 
 The switch-case structure in `emulate_instructions()` handles all 35 CHIP-8 instructions, from simple register operations to complex sprite drawing.
 
+![CHIP-8 DEMO](demo/CHIP-8_demo_cpuinstr.gif)
+
 <details>
 <summary><strong>Click to expand for more details about CPU instructions</strong></summary>
 <br>
@@ -247,6 +249,8 @@ CHIP-8 systems traditionally run at 60Hz for the display refresh and timer updat
 The debugging system I built goes well beyond what's typical for CHIP-8 emulators. The register window shows execution statistics, instruction decode information, and sprite drawing details. The memory viewer provides navigation tools, syntax highlighting for different memory regions, and quick jumps to important addresses.
 
 The step debugger allows single-instruction execution while paused, making it easy to trace through program execution and understand how CHIP-8 games work.
+
+![CHIP-8 DEMO](demo/CHIP-8_demo_debug.gif)
 
 ## Technical Implementation Details
 
