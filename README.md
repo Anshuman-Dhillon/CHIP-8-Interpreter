@@ -61,47 +61,50 @@ The switch-case structure in `emulate_instructions()` handles all 35 CHIP-8 inst
 
 <details>
 <summary><strong>Click to expand for more details about CPU instructions</strong></summary>
-<br>
-Like I mentioned before, CHIP-8 instructions are 16-bit values that encode different operations using a carefully designed bit layout. In this section, I'll explain how these bits are extracted and interpreted.
 
-Every CHIP-8 instruction follows this bit pattern:
+Like I mentioned before, the CHIP-8 instructions are 16-bit values that encode different operations using a carefully designed bit layout.
+
+**Why Separate Into Components?**
+
+Rather than having all 65,536 (2^16) opcodes, CHIP-8 uses a clever system where instructions share common bit patterns that encode operands directly within the instruction word. The system uses the upper 4 bits to identify the instruction family, then uses the remaining 12 bits to encode operands like register numbers, memory addresses, and constants. This approach dramatically reduces the complexity of both the interpreter and the instruction decoder.
+
+For example, all arithmetic operations (ADD, SUB, AND, OR, XOR) start with `0x8`, but they use the lowest 4 bits to specify which operation to perform. Similarly, all instructions that load immediate values into registers start with `0x6`, but they use the middle and lower bits to specify which register and what value.
+
+**Bit Layout and Extraction**
+
+Every CHIP-8 instruction follows this 16-bit pattern:
 ```
-15 14 13 12 11 10  9  8  7  6  5  4  3  2  1  0
-|  Opcode  |  X  |  Y  |        N/NN/NNN        |
+15 14 13 12 | 11 10  9  8 | 7  6  5  4 | 3  2  1  0
+   Opcode   |      X      |     Y      |     N
+            |             |    NN  (8-bit address)
+            |     NNN        (12-bit constant)
 ```
 
-When my emulator fetches an instruction, it extracts these components:
-```cpp
-chip8->inst.opcode = (chip8->memory[chip8->pc] << 8) | chip8->memory[chip8->pc + 1];
-chip8->inst.NNN = chip8->inst.opcode & 0x0FFF;        // 12-bit address (bits 0-11)
-chip8->inst.NN = chip8->inst.opcode & 0x0FF;          // 8-bit constant (bits 0-7)
-chip8->inst.N = chip8->inst.opcode & 0x0F;            // 4-bit constant (bits 0-3)
-chip8->inst.X = (chip8->inst.opcode >> 8) & 0x0F;     // 4-bit register ID (bits 8-11)
-chip8->inst.Y = (chip8->inst.opcode >> 4) & 0x0F;     // 4-bit register ID (bits 4-7)
-```
+The bitwise operations extract these fields by using shifts and masks. The bit shift operation (`>>`) moves bits to the right, effectively dividing by powers of 2. The mask operation (`&`) keeps only the bits we want while zeroing out the rest.
 
-The Role of Each Component:
+Here's how each extraction works:
 
-- NNN: 12-bit memory address used in jump and call instructions (0x000 to 0xFFF)
-- NN: 8-bit immediate value for loading constants into registers (0x00 to 0xFF)
-- N: 4-bit value used for sprite height and shift operations (0x0 to 0xF)
-- X: Source/destination register identifier (V0 to VF)
-- Y: Second register identifier for two-register operations
+**X Register (bits 8-11):** `(opcode >> 8) & 0x0F`
+- `>> 8` shifts the entire instruction right by 8 positions, moving bits 8-11 to positions 0-3
+- `& 0x0F` keeps only the lowest 4 bits (binary 1111), giving us values 0-15
 
-The bit shifting operations extract specific fields from the 16-bit instruction:
+**Y Register (bits 4-7):** `(opcode >> 4) & 0x0F`  
+- `>> 4` shifts right by 4 positions, moving bits 4-7 to positions 0-3
+- The mask again keeps only 4 bits for register numbers 0-15
 
-- `>> 8` shifts right by 8 bits, moving bits 8-15 to positions 0-7
-- `& 0x0F` masks to keep only the lowest 4 bits (binary 1111)
-- `& 0x0FFF` masks to keep the lowest 12 bits (binary 111111111111)
+**12-bit Address (NNN):** `opcode & 0x0FFF`
+- No shift needed since these are the lowest 12 bits
+- `0x0FFF` in binary is 111111111111, keeping all 12 bits for addresses 0x000-0xFFF
 
-Fetch-Decode-Execute Cycle:
+**8-bit Constant (NN):** `opcode & 0x0FF`
+- Keeps the lowest 8 bits for values 0x00-0xFF
 
-- Fetch: Read 16-bit instruction from memory at PC address (big-endian format)
-- Decode: Extract opcode and operands using bit masks and shifts
-- Execute: Use switch-case structure to jump to appropriate instruction handler
-- Update: Increment PC and update any affected registers or memory
+**4-bit Constant (N):** `opcode & 0x0F`
+- Keeps only the lowest 4 bits for values 0x0-0xF
 
-The switch-case structure uses the upper 4 bits (opcode) to determine instruction type, with some instructions requiring additional decoding of the lower bits for variants.
+This extraction happens once per instruction, then the decoder uses a switch statement on the opcode (upper 4 bits) to jump directly to the appropriate handler. Some instruction families like `0x8XXX` need additional decoding of the N field to determine the specific operation, but this two-level approach keeps the decoder both fast and readable.
+
+It took me some time to understand the fact that a single 16-bit word contains both the operation to perform and all the data needed to perform it, and it seems to me now as a very elegant solution. I'm sure modern processors work in a similar way.
 
 </details>
 
@@ -118,63 +121,49 @@ CHIP-8 systems have a straightforward memory layout that I've implemented:
 
 ### Graphics System
 
-The display system was one of the more interesting challenges. CHIP-8 has a 64x32 pixel monochrome display where sprites are drawn using XOR operations. This means drawing the same sprite twice in the same location will erase it - a feature that many classic games rely on for animation.
+The display system was one of the more interesting challenges. CHIP-8 has a 64x32 pixel monochrome display where sprites are drawn using XOR operations. This means drawing the same sprite twice in the same location will erase it, a feature that many classic games rely on for animation.
 
 My implementation uses SDL3 for the underlying graphics, but I render the CHIP-8 display pixel-by-pixel in the ImGui viewport. Each CHIP-8 pixel becomes a rectangle that scales with the window size, maintaining the original 2:1 aspect ratio.
 
 <details>
-<summary><strong>Click to expand for more detail about the graphics/display system</strong></summary>
+<summary><strong>Click to expand for more details about the graphics/display system</strong></summary>
 
 The CHIP-8 graphics system is simple but elegant. The 64x32 pixel monochrome display uses XOR-based drawing, which creates unique visual effects that many classic games depend on.
 
-###XOR Drawing Algorithm:###
+**Understanding XOR Drawing**
 
-When a sprite is drawn, each pixel is XORed with the corresponding display buffer pixel:
-```cpp
-*pixel ^= sprite_pixel;
-```
-  
-How XOR Works in Practice:
-```
-Display Pixel | Sprite Pixel | Result | Visual Effect
-      0       |      0       |   0    | Background stays off
-      0       |      1       |   1    | Pixel turns on
-      1       |      0       |   1    | Pixel stays on
-      1       |      1       |   0    | Pixel turns off (collision)
-```
+When a sprite is drawn, each sprite pixel is XORed with the corresponding display buffer pixel using the operation `*pixel ^= sprite_pixel`. XOR has a special property: it's reversible. If you XOR the same value twice, you get back to the original state.
 
-This creates several important behaviors:
+This creates four possible outcomes when drawing:
+- Background pixel (0) + sprite background (0) = remains off (0)
+- Background pixel (0) + sprite foreground (1) = turns on (1)  
+- Foreground pixel (1) + sprite background (0) = stays on (1)
+- Foreground pixel (1) + sprite foreground (1) = turns off (0) - **collision detected**
 
-- Drawing the same sprite twice in the same location erases it completely
-- Overlapping sprites create "holes" where they intersect
-- Games can create flashing effects by rapidly redrawing sprites
-- Collision detection happens automatically when pixels turn off
+The most important implication is that drawing the same sprite twice in the same location will erase it completely. This isn't a bug - it's a feature that games use for smooth animation. Characters can move by erasing themselves at the old position and drawing at the new position without needing to track what was underneath.
 
-###Sprite Drawing Process:####
+**Collision Detection Through XOR**
+
+The VF register automatically gets set to 1 when any sprite pixel would turn off a display pixel that was already on. This happens before the XOR operation, so games can detect when sprites would overlap and react accordingly. Many CHIP-8 games use this for ball-paddle collisions, enemy interactions, and boundary detection.
+
+**Sprite Memory Layout**
+
+Each sprite row is stored as a single byte in memory, with bit 7 representing the leftmost pixel and bit 0 representing the rightmost pixel. The drawing loop processes these bits from left to right:
 
 ```cpp
-for (int row = 0; row < chip8->inst.N; row++) {
-    const uint8_t sprite_data = chip8->memory[chip8->I + row];
-    for (int col = 7; col >= 0; col--) {
-        bool* pixel = &chip8->display[y * config.window_width + x];
-        const bool sprite_pixel = (sprite_data & (1 << col));
-        
-        if (sprite_pixel && *pixel) {
-            chip8->V[0xF] = 1; // Collision detected
-        }
-        *pixel ^= sprite_pixel;
-    }
+for (int col = 7; col >= 0; col--) {
+    const bool sprite_pixel = (sprite_data & (1 << col));
+    // XOR this pixel with display buffer
 }
 ```
 
-###Memory to Display Mapping:###
+The bit mask `(1 << col)` creates patterns like 10000000, 01000000, 00100000, etc., isolating each pixel bit for processing.
 
-- Each sprite row is stored as a single byte in memory
-- Bit 7 (leftmost) represents the first pixel
-- Bit 0 (rightmost) represents the eighth pixel
-- Sprites wrap around screen edges automatically
+**Visual Effects Through XOR**
 
-The VF register is set to 1 when any "on" pixel in the sprite overlaps with an already "on" pixel in the display buffer. This happens before the XOR operation, so games can detect when sprites would collide and react accordingly.
+This system enables several visual tricks that would be complex in other graphics systems. Overlapping sprites create "holes" where they intersect. Games can create flashing effects by rapidly redrawing sprites. Some games even use XOR drawing to create simple transparency effects by carefully designing sprites that complement each other.
+
+The 64x32 resolution might seem limiting, but the XOR system and clever sprite design allowed developers to create surprisingly sophisticated games within these constraints.
 
 </details>
 
@@ -190,50 +179,48 @@ void generate_square_wave(float* buffer, int sample_count, uint32_t sample_rate,
 Users can adjust both the frequency (100-2000 Hz) and volume of the beep sound, or mute it entirely.
 
 <details>
-<summary><strong>Click to expand for more detail about the sound system</strong></summary>
-The CHIP-8 audio system generates a simple square wave tone when the sound timer is active. Understanding the mathematics behind square wave generation reveals how digital audio synthesis works at a fundamental level.
-Square Wave Mathematics:
-A square wave alternates between two amplitude levels at regular intervals. For a frequency f, the wave period T = 1/f. In digital audio, we generate samples at a fixed sample rate (44,100 Hz for CD quality).
+<summary><strong>Click to expand for more details about the sound system</strong></summary>
+
+The CHIP-8 audio system generates a simple square wave tone when the sound timer is active. Understanding how this works reveals the fundamentals of digital audio synthesis and why square waves were chosen for early computer systems.
+
+**Square Wave Mathematics**
+
+A square wave alternates between two amplitude levels at regular intervals, creating the distinctive "buzzy" sound associated with retro games. For a desired frequency f, the wave period T equals 1/f. In digital audio, we generate discrete samples at a fixed sample rate (44,100 samples per second for CD quality).
+
+The key calculation is determining how many audio samples make up one complete wave cycle: `samples_per_cycle = sample_rate / frequency`. For a 440 Hz tone at 44.1 kHz sample rate, each cycle spans exactly 100 samples.
+
+**Sample Generation Process**
+
+The square wave generator tracks its current phase (position within the wave cycle) and alternates between positive and negative amplitude every half-cycle:
 
 ```cpp
-cppconst float samples_per_cycle = (float)sample_rate / frequency;
+float sample = ((*phase / (uint32_t)(samples_per_cycle / 2)) % 2) ? amplitude : -amplitude;
 ```
 
-Sample Generation Algorithm:
+The division by `samples_per_cycle / 2` determines how many samples represent half a cycle. The modulo operation `% 2` creates the alternating pattern: when the result is 1, output positive amplitude; when 0, output negative amplitude.
+
+**Phase Tracking for Smooth Audio**
+
+The phase variable is crucial for preventing audio artifacts. If we always started square waves from phase 0, starting and stopping sounds would create audible pops and clicks. By maintaining phase continuity, the wave resumes exactly where it left off, ensuring smooth audio transitions.
+
+When the phase reaches the end of a complete cycle, it wraps back to 0, creating a seamless loop. This approach works whether the sound plays for milliseconds or minutes.
+
+**Volume Control Through Amplitude Scaling**
+
+Digital audio samples typically range from -1.0 to +1.0, representing the maximum and minimum amplitudes the audio hardware can reproduce. The volume control converts integer values (0-10000 in the emulator) to this normalized range:
 
 ```cpp
-for (int i = 0; i < sample_count; i++) {
-    float sample = ((*phase / (uint32_t)(samples_per_cycle / 2)) % 2) ? amplitude : -amplitude;
-    buffer[i] = sample;
-
-    (*phase)++;
-
-    if (*phase >= (uint32_t)samples_per_cycle) {
-        *phase = 0;
-    }
-}
+const float amplitude = volume / 32767.0f;
 ```
-How This Works:
 
-samples_per_cycle: How many audio samples make up one complete wave cycle
-samples_per_cycle / 2: Half-cycle duration (when the wave should flip)
-*phase: Current position within the wave cycle
-The modulo operation creates the alternating pattern
+Dividing by 32,767 (the maximum value of a 16-bit signed integer) maps the volume control to the full audio range. This linear scaling provides intuitive volume control where 50% setting produces half the amplitude.
 
-Volume Control:
-Volume in digital audio is controlled by amplitude scaling:
-cppconst float amplitude = volume / 32767.0f; // Normalize 16-bit range to [-1.0, 1.0]
-The division by 32,767 (maximum 16-bit signed integer value) converts the integer volume setting into a floating-point amplitude between -1.0 and 1.0, which is the standard range for digital audio samples.
-Phase Tracking:
-The phase variable tracks our position within the current wave cycle. This ensures smooth audio even when the sound starts and stops, preventing audio pops and clicks that would occur if we always started from phase 0.
-SDL3 Audio Pipeline:
+**Why Square Waves for CHIP-8**
 
-Generate square wave samples in floating-point format
-Fill SDL audio buffer with sample data
-SDL handles conversion to hardware audio format
-Audio device plays samples at precisely timed intervals
+Square waves were ideal for early computer systems because they're mathematically simple to generate and require minimal CPU resources. Unlike sine waves that need trigonometric calculations, square waves only require basic arithmetic and conditional logic. They also cut through ambient noise well due to their harmonic richness, making them audible even through poor speakers.
 
-This approach provides clean, configurable audio with minimal CPU overhead.
+The distinctive sound of square waves became synonymous with early video games, creating the "chiptune" aesthetic that remains popular in retro-style games today.
+
 </details>
 
 ### Timing and Synchronization
