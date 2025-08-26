@@ -41,7 +41,7 @@ The CHIP-8 system was designed to make it easy to port simple games across diffe
 
 ## Why CHIP-8?
 
-I chose to implement a CHIP-8 interpreter because it strikes the perfect balance between simplicity and completeness. The system is small enough to understand fully (since it has only 35 instructions, 4KB of memory, and a 64x32 pixel display) but complex enough to demonstrate real emulation concepts like instruction decoding, memory management, and hardware timing.
+I chose to implement a CHIP-8 interpreter because it's perfectly balanced in terms of simplicity and complexity. The system is small enough to understand fully (since it has only 35 instructions, 4KB of memory, and a 64x32 pixel display) but complex enough to demonstrate real emulation concepts like instruction decoding, memory management, and hardware timing.
 
 My implementation runs CHIP-8 ROMs accurately at configurable speeds (typically 700 instructions per second), handles all original CHIP-8 instructions, and includes extensive debugging capabilities that go far beyond what most CHIP-8 interpreters offer.
 
