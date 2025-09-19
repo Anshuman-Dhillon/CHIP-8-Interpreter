@@ -181,7 +181,7 @@ bool set_config_from_args(Config& config) {
         32,                 // CHIP8 original Y resolution
         0xFFFFFFFF,         // WHITE (foreground)
         0x000000FF,         // BLACK (background)
-        35,                 // Scale
+        25,                 // Scale
 		700,                // Number of instructions to emulate per second
 		440,			    // Frequency of the square wave beep sound
 		44100,              // Audio sample rate (CD quality, 44100 Hz)
