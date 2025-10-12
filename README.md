@@ -355,7 +355,7 @@ The project also reinforced the importance of clean code organization and compre
 
 ## Known Issues
 
-- Display flickers consistently, my guess is it happens because you are clearing the screen each time. Could be fixed through linear interpolation, which I'll add in later as this is not a critical issue, just annoying.
+- Display flickers consistently, my guess is it happens because you are clearing the screen each time. Could be fixed through double buffers, which I'll add in later as this is not a critical issue, just annoying.
 
 ## Future Improvements
 
@@ -369,8 +369,7 @@ While the current implementation is fully functional, there are several areas I'
 
 ## References
 
-- [COSMAC VIP Instruction Manual 1978](https://link-to-manual) - Original RCA COSMAC VIP documentation
-- [Handmade Penguin CHIP-8 Tutorial](https://link-to-tutorial) - David Gow's CHIP-8 implementation guide
+- [COSMAC VIP Instruction Manual 1978](https://archive.org/details/bitsavers_rcacosmacCManual1978_6956559/) - Original RCA COSMAC VIP documentation
 - [SDL3 Releases](https://github.com/libsdl-org/SDL/releases) - SDL3 library downloads and documentation
 - [Write a CHIP-8 Emulator](https://tobiasvl.github.io/blog/write-a-chip-8-emulator/) - Tobias V. Langhoff's comprehensive CHIP-8 guide
 - [SDL3 Wiki](https://wiki.libsdl.org/SDL3/) - Official SDL3 documentation
