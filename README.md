@@ -88,7 +88,7 @@ The switch-case structure in `emulate_instructions()` handles all 35 CHIP-8 inst
 <details>
 <summary><strong>Click to expand for more details about CPU instructions</strong></summary>
 
-CHIP-8 instructions are 16-bit values that encode different operations using a carefully designed bit layout. Rather than having thousands of individual opcodes like modern processors, CHIP-8 uses a clever system where instructions share common bit patterns that encode operands directly within the instruction word.
+CHIP-8 instructions are 16-bit values that encode different operations using a carefully designed bit layout. Rather than having thousands of individual opcodes, we use a clever system where instructions share common bit patterns that encode operands directly within the instruction word.
 
 #### Why Separate Into Components?
 
