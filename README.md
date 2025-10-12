@@ -52,7 +52,7 @@ My implementation runs CHIP-8 ROMs accurately at configurable speeds (typically 
 - 16-key hexadecimal keypad input
 - Sound system with configurable square wave generation
 
-### Debugging Infrastructure
+### Infrastructure
 - Real-time register and memory viewer
 - Step-by-step instruction execution
 - Assembly instruction decoder showing human-readable mnemonics
@@ -265,7 +265,7 @@ The debugging system I built goes well beyond what's typical for CHIP-8 emulator
 
 The step debugger allows single-instruction execution while paused, making it easy to trace through program execution and understand how CHIP-8 games work.
 
-![CHIP-8 DEMO](//gif demo here)
+![ImGui Demo](demo/CHIP-8_demo_debug.gif)
 
 ## Technical Implementation Details
 
@@ -283,8 +283,6 @@ I had initially chosen C for its low-level control, but later switched to C++ du
 **SDL3**: I selected SDL3 over alternatives like GLFW or raw Win32/X11 because it provides excellent cross-platform support for graphics, audio, and input in a single library. SDL3's new audio streaming API made implementing the square wave generation straightforward.
 
 **Dear ImGui**: This immediate-mode GUI library was perfect for the debugging interface. It integrates cleanly with SDL3, provides professional-looking UI elements, and makes it easy to create interactive debugging tools.
-
-![ImGui Demo](demo/CHIP-8_demo_debug.gif)
 
 **TinyFileDialogs**: A lightweight, cross-platform file dialog library that integrates seamlessly for ROM loading.
 
