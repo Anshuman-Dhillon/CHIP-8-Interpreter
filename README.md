@@ -32,7 +32,7 @@ A functional CHIP-8 interpreter with comprehensive debugging tools, built from s
 
 ## What is CHIP-8?
 
-CHIP-8 is a simple virtual machine and programming language that was originally developed in the 1970s for early personal computers. Unlike modern CPUs, CHIP-8 is an interpreted language. It's not actual hardware, but rather a virtual machine that runs on top of real hardware. This makes it an excellent starting point for learning about emulation and computer architecture.
+CHIP-8 is an interpreted programming language that was originally developed in the 1970s for early microcontrollers like the COSMAC VIP. It's not actual hardware, but rather an interpreter that reads the original CHIP-8 microcode and runs on top of real hardware. This makes it an excellent starting point for learning about emulation and computer architecture.
 
 The CHIP-8 system was designed to make it easy to port simple games across different computer platforms. Classic games like Pong, Tetris, Space Invaders, and Pac-Man were all implemented for CHIP-8. These games still run today on CHIP-8 interpreters, making them a perfect test case for emulation projects.
 
